@@ -1,58 +1,58 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
 
+
+
+# df = pd.DataFrame(boston.data, columns=boston.feature_names)
+df = pd.read_csv("https://raw.githubusercontent.com/selva86/datasets/master/BostonHousing.csv")
+
+# Set page config
 st.set_page_config(
-    page_title="Penguins Explorer", 
-    page_icon="🐧", 
-    layout="centered",
+    page_title="Boston Housing Predictor",
+    page_icon="🏠",
+    layout="centered"
 )
 
-st.title("🐧 Penguins Explorer")
-
+# Title and description
+st.title("Boston Housing Predictor")
 st.markdown("""
-## Observations
-- The Adelie species has the highest bill length.
-
+Predict the median value of owner-occupied homes in Boston using a linear regression model.
 """)
 
-st.divider()
+# Sidebar for user input
+st.sidebar.header('Adjust Parameters')
 
-df = pd.read_csv("https://raw.githubusercontent.com/mcnakhaee/palmerpenguins/master/palmerpenguins/data/penguins.csv")
+# User inputs
+features = {}
+for feature in df.columns[:-1]:  # Exclude target variable (MEDV)
+    features[feature] = st.sidebar.slider(f'{feature}', float(df[feature].min()), float(df[feature].max()), float(df[feature].mean()))
 
-with st.sidebar:
-    # Input filter options
-    bill_length_slider = st.slider(
-        "Bill Length (mm)",
-        min(df["bill_length_mm"]),
-        max(df["bill_length_mm"]),
-    )
-    species_filter = st.selectbox(
-        "Species",
-        df["species"].unique(),
-        index=None
-    )
-    islands_filter = st.multiselect("Island", df["island"].unique())
+# Create feature vector
+X = pd.DataFrame(features, index=[0])
 
-# Filter data
-if islands_filter:
-    df = df[df["island"].isin(islands_filter)]
-if species_filter:
-    df = df[df["species"] == species_filter]
-df = df[df["bill_length_mm"] > bill_length_slider]
+# Prediction function
+def predict_price(X):
+    X_train, X_test, y_train, y_test = train_test_split(df.drop(columns=['medv']), df['medv'], test_size=0.2, random_state=42)
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    prediction = model.predict(X)
+    return prediction[0]
 
-with st.expander("RAW Data"):
-    st.write(df)
+# Predict
+prediction = predict_price(X)
 
-fig = px.histogram(
-    df, 
-    x="bill_length_mm"
-)
-st.plotly_chart(fig)
+# Display prediction
+st.subheader('Predicted Median Value of Owner-Occupied Homes in $1000s')
+st.write(f"${prediction:,.2f}")
 
-fig2 = px.scatter(
-    df, 
-    x="bill_length_mm", 
-    y="bill_depth_mm"
-)
-st.plotly_chart(fig2)
+st.subheader('Histogram of Median Home Values')
+fig_hist = px.histogram(df, x='medv', title='Distribution of Median Home Values')
+st.plotly_chart(fig_hist)
+
+# Scatter plot
+st.subheader('Scatter Plot of Rooms vs Median Home Values')
+fig_scatter = px.scatter(df, x='rm', y='medv', title='Rooms vs Median Home Values')
+st.plotly_chart(fig_scatter)
